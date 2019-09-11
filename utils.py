@@ -441,7 +441,12 @@ def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square
         image_max = max(h, w)
         if round(image_max * scale) > max_dim:
             scale = max_dim / image_max
-
+            
+    if max_dim and mode == "hadi_crop":    # This section added by Hadi
+        image_max = w
+        if round(image_max * scale) > max_dim:
+            scale = max_dim / image_max
+            
     # Resize image using bilinear interpolation
     if scale != 1:
         image = resize(image, (round(h * scale), round(w * scale)),
@@ -487,10 +492,16 @@ def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square
         crop = (y, x, min_dim, min_dim)
         image = image[y:y + min_dim, x:x + min_dim]
         window = (0, 0, min_dim, min_dim)
+    elif mode == "hadi_crop":            # This section added by Hadi
+        # remove the bottom section
+        h, w = image.shape[:2]
+        crop = (0, 0, w, w)
+        image = image[0:w, 0:w]
+        window = (0, 0, w, w)
+#         print("image shape", image.shape, "windiw size:", window)
     else:
         raise Exception("Mode {} not supported".format(mode))
     return image.astype(image_dtype), window, scale, padding, crop
-
 
 def resize_mask(mask, scale, padding, crop=None):
     """Resizes a mask using the given scale and padding.
