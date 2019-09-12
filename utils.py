@@ -387,7 +387,6 @@ class Dataset(object):
 
 def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square"):
     """Resizes an image keeping the aspect ratio unchanged.
-
     min_dim: if provided, resizes the image such that it's smaller
         dimension == min_dim
     max_dim: if provided, ensures that the image longest side doesn't
@@ -442,15 +441,15 @@ def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square
         if round(image_max * scale) > max_dim:
             scale = max_dim / image_max
             
-    if max_dim and mode == "hadi_crop":    # This section added by Hadi
+    if mode == "hadi_crop":    # This section added by Hadi
         image_max = w
         if round(image_max * scale) > max_dim:
             scale = max_dim / image_max
             
     # Resize image using bilinear interpolation
     if scale != 1:
-        image = resize(image, (round(h * scale), round(w * scale)),
-                       preserve_range=True)
+#         image = resize(image, (round(h * scale), round(w * scale)), preserve_range=True)    # original
+        image = resize(image, (round(w * scale), round(w * scale)), preserve_range=True)     # Hadi
 
     # Need padding or cropping?
     if mode == "square":
@@ -520,7 +519,7 @@ def resize_mask(mask, scale, padding, crop=None):
     if crop is not None:
         y, x, h, w = crop
         mask = mask[y:y + h, x:x + w]
-    else:
+    else: 
         mask = np.pad(mask, padding, mode='constant', constant_values=0)
     return mask
 
