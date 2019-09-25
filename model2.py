@@ -91,7 +91,7 @@ def compute_backbone_shapes(config, image_shape):
 # https://github.com/fchollet/deep-learning-models/blob/master/resnet50.py
 
 def identity_block(input_tensor, kernel_size, filters, stage, block,
-                   use_bias=True, train_bn=True, dropout=False):
+                   use_bias=True, train_bn=True, dropout=0.1):
     """The identity_block is the block that has no conv layer at shortcut
     # Arguments
         input_tensor: input tensor
@@ -110,11 +110,13 @@ def identity_block(input_tensor, kernel_size, filters, stage, block,
                   use_bias=use_bias)(input_tensor)
     x = BatchNorm(name=bn_name_base + '2a')(x, training=train_bn)
     x = KL.Activation('relu')(x)
+    x = KL.Dropout(dropout)(x)                                                    # Hadi added dropout
 
     x = KL.Conv2D(nb_filter2, (kernel_size, kernel_size), padding='same',
                   name=conv_name_base + '2b', use_bias=use_bias)(x)
     x = BatchNorm(name=bn_name_base + '2b')(x, training=train_bn)
     x = KL.Activation('relu')(x)
+    x = KL.Dropout(dropout)(x)                                                    # Hadi added dropout
 
     x = KL.Conv2D(nb_filter3, (1, 1), name=conv_name_base + '2c',
                   use_bias=use_bias)(x)
@@ -122,11 +124,11 @@ def identity_block(input_tensor, kernel_size, filters, stage, block,
 
     x = KL.Add()([x, input_tensor])
     x = KL.Activation('relu', name='res' + str(stage) + block + '_out')(x)
+    x = KL.Dropout(dropout)(x)                                                    # Hadi added dropout
     return x
 
-
 def conv_block(input_tensor, kernel_size, filters, stage, block,
-               strides=(2, 2), use_bias=True, train_bn=True, dropout=False):
+               strides=(2, 2), use_bias=True, train_bn=True, dropout=True):
     """conv_block is the block that has a conv layer at shortcut
     # Arguments
         input_tensor: input tensor
@@ -165,8 +167,7 @@ def conv_block(input_tensor, kernel_size, filters, stage, block,
     x = KL.Activation('relu', name='res' + str(stage) + block + '_out')(x)
     return x
 
-
-def resnet_graph(input_image, architecture, stage5=False, train_bn=True, dropout=False):
+def resnet_graph(input_image, architecture, stage5=False, train_bn=True, dropout=True):
     """Build a ResNet graph.
         architecture: Can be resnet50 or resnet101
         stage5: Boolean. If False, stage5 of the network is not created
@@ -202,7 +203,6 @@ def resnet_graph(input_image, architecture, stage5=False, train_bn=True, dropout
     else:
         C5 = None
     return [C1, C2, C3, C4, C5]
-
 
 ############################################################
 #  Proposal Layer
@@ -2233,7 +2233,7 @@ class MaskRCNN():
             "*epoch*", "{epoch:04d}")
 
     def train(self, train_dataset, val_dataset, learning_rate, epochs, layers,
-              augmentation=None, custom_callbacks=None, no_augmentation_sources=None, dropout=False):
+              augmentation=None, custom_callbacks=None, no_augmentation_sources=None, dropout=True):
         """Train the model.
         train_dataset, val_dataset: Training and validation Dataset objects.
         learning_rate: The learning rate to train with
