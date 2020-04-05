@@ -278,6 +278,7 @@ class Dataset(object):
             "id": image_id,
             "source": source,
             "path": path,
+            "file_name": file_name,          # Hadi adds to show the name of images
         }
         image_info.update(kwargs)
         self.image_info.append(image_info)
@@ -307,6 +308,7 @@ class Dataset(object):
         self.class_ids = np.arange(self.num_classes)
         self.class_names = [clean_name(c["name"]) for c in self.class_info]
         self.num_images = len(self.image_info)
+        self.images_names = [clean_name(c["file_name"]) for c in self.image_info]          # Hadi adds to show the name of images
         self._image_ids = np.arange(self.num_images)
 
         # Mapping from source class and image IDs to internal IDs

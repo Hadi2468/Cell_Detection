@@ -39,6 +39,7 @@ class CocoLikeDataset(utils.Dataset):
         seen_images = {}
         for image in coco_json["images"]:
             image_id = image["id"]
+            image_name = image["file_name"]                                   # Hadi wants to show the name of images 
             if image_id in seen_images:
                 print("Warning: Skipping duplicate image id: {}".format(image))
             else:
@@ -53,8 +54,8 @@ class CocoLikeDataset(utils.Dataset):
                 image_annotations = annotations[image_id]
                 
                 ## Add the image using the base method from utils.Dataset
-                self.add_image(source=source_name, image_id=image_id, path=image_path, width=image_width,
-                               height=image_height, annotations=image_annotations)
+                self.add_image(source=source_name, image_id=image_id, path=image_path, width=image_width, file_name=file_name,
+                               height=image_height, annotations=image_annotations)     # Hadi adds "file_name" to show the name of images
                 
     def load_mask(self, image_id):
         """ Load instance masks for the given image. MaskRCNN expects masks in the form of a bitmap [height, width, instances].
