@@ -1,11 +1,10 @@
-"""""
+"""
 Mask R-CNN
 The main Mask R-CNN model implementation.
 Copyright (c) 2017 Matterport, Inc.
 Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
-"""""
-
+Written by Waleed Abdulla. Developed by Hadi Hosseini.
+"""
 import os
 import random
 import datetime
@@ -1815,7 +1814,6 @@ class MaskRCNN():
 
         # Image size must be dividable by 2 multiple times
         h, w = config.IMAGE_SHAPE[:2]
-        print (h, w)
         h = w                                                                                 # Hadi added
         if h / 2**6 != int(h / 2**6) or w / 2**6 != int(w / 2**6):
             raise Exception("Image size must be dividable by 2 at least 6 times "
@@ -1978,15 +1976,15 @@ class MaskRCNN():
             output_rois = KL.Lambda(lambda x: x * 1, name="output_rois")(rois)
 
             # Losses
-            rpn_class_loss = KL.Lambda(lambda x: rpn_class_loss_graph(*x), name="rpn_class_loss")(
+            Classification_loss_rpn = KL.Lambda(lambda x: rpn_class_loss_graph(*x), name="Classification_loss_rpn")(
                 [input_rpn_match, rpn_class_logits])
-            rpn_bbox_loss = KL.Lambda(lambda x: rpn_bbox_loss_graph(config, *x), name="rpn_bbox_loss")(
+            BoundingBox_loss_rpn = KL.Lambda(lambda x: rpn_bbox_loss_graph(config, *x), name="BoundingBox_loss_rpn")(
                 [input_rpn_bbox, input_rpn_match, rpn_bbox])
-            class_loss = KL.Lambda(lambda x: mrcnn_class_loss_graph(*x), name="mrcnn_class_loss")(
+            class_loss = KL.Lambda(lambda x: mrcnn_class_loss_graph(*x), name="Classification_loss")(
                 [target_class_ids, mrcnn_class_logits, active_class_ids])
-            bbox_loss = KL.Lambda(lambda x: mrcnn_bbox_loss_graph(*x), name="mrcnn_bbox_loss")(
+            bbox_loss = KL.Lambda(lambda x: mrcnn_bbox_loss_graph(*x), name="BoundingBox_loss")(
                 [target_bbox, target_class_ids, mrcnn_bbox])
-            mask_loss = KL.Lambda(lambda x: mrcnn_mask_loss_graph(*x), name="mrcnn_mask_loss")(
+            mask_loss = KL.Lambda(lambda x: mrcnn_mask_loss_graph(*x), name="Masking_loss")(
                 [target_mask, target_class_ids, mrcnn_mask])
 
             # Model
@@ -1995,10 +1993,33 @@ class MaskRCNN():
             if not config.USE_RPN_ROIS:
                 inputs.append(input_rois)
             outputs = [rpn_class_logits, rpn_class, rpn_bbox,
-                       mrcnn_class_logits, mrcnn_class, mrcnn_bbox, mrcnn_mask,
-                       rpn_rois, output_rois,
-                       rpn_class_loss, rpn_bbox_loss, class_loss, bbox_loss, mask_loss]
+                       mrcnn_class_logits, mrcnn_class, mrcnn_bbox, mrcnn_mask, Classification_loss_rpn, BoundingBox_loss_rpn,
+                       rpn_rois, output_rois, class_loss, bbox_loss, mask_loss]  
             model = KM.Model(inputs, outputs, name='mask_rcnn')
+
+#             # Losses
+#             rpn_class_loss = KL.Lambda(lambda x: rpn_class_loss_graph(*x), name="rpn_class_loss")(
+#                 [input_rpn_match, rpn_class_logits])
+#             rpn_bbox_loss = KL.Lambda(lambda x: rpn_bbox_loss_graph(config, *x), name="rpn_bbox_loss")(
+#                 [input_rpn_bbox, input_rpn_match, rpn_bbox])
+#             class_loss = KL.Lambda(lambda x: mrcnn_class_loss_graph(*x), name="mrcnn_class_loss")(
+#                 [target_class_ids, mrcnn_class_logits, active_class_ids])
+#             bbox_loss = KL.Lambda(lambda x: mrcnn_bbox_loss_graph(*x), name="mrcnn_bbox_loss")(
+#                 [target_bbox, target_class_ids, mrcnn_bbox])
+#             mask_loss = KL.Lambda(lambda x: mrcnn_mask_loss_graph(*x), name="mrcnn_mask_loss")(
+#                 [target_mask, target_class_ids, mrcnn_mask])
+
+#             # Model
+#             inputs = [input_image, input_image_meta,
+#                       input_rpn_match, input_rpn_bbox, input_gt_class_ids, input_gt_boxes, input_gt_masks]
+#             if not config.USE_RPN_ROIS:
+#                 inputs.append(input_rois)
+#             outputs = [rpn_class_logits, rpn_class, rpn_bbox,
+#                        mrcnn_class_logits, mrcnn_class, mrcnn_bbox, mrcnn_mask,
+#                        rpn_rois, output_rois,
+#                        rpn_class_loss, rpn_bbox_loss, class_loss, bbox_loss, mask_loss]
+#             model = KM.Model(inputs, outputs, name='mask_rcnn')
+
         else:
             # Network Heads
             # Proposal classifier and BBox regressor heads
@@ -2133,9 +2154,10 @@ class MaskRCNN():
         # First, clear previously set losses to avoid duplication
         self.keras_model._losses = []
         self.keras_model._per_input_losses = {}
-        loss_names = [
-            "rpn_class_loss",  "rpn_bbox_loss",
-            "mrcnn_class_loss", "mrcnn_bbox_loss", "mrcnn_mask_loss"]
+#         loss_names = ["rpn_class_loss", "rpn_bbox_loss", "mrcnn_class_loss", "mrcnn_bbox_loss", "mrcnn_mask_loss"] # Origingal code
+#         loss_names = ["Classification_loss_rpn", "BoundingBox_loss_rpn", "Classification_loss", "BoundingBox_loss", "Masking_loss"] # Hadi added
+        loss_names = ["Classification_loss", "BoundingBox_loss", "Masking_loss"] # Hadi removed the rpn loss to hide them in the results
+
         for name in loss_names:
             layer = self.keras_model.get_layer(name)
             if layer.output in self.keras_model.losses:
@@ -2169,7 +2191,7 @@ class MaskRCNN():
                 * self.config.LOSS_WEIGHTS.get(name, 1.))
             self.keras_model.metrics_tensors.append(loss)
 
-    def set_trainable(self, layer_regex, keras_model=None, indent=0, verbose=1):
+    def set_trainable(self, layer_regex, keras_model=None, indent=0, verbose=0):
         """Sets model layers as trainable if their names match
         the given regular expression.
         """
